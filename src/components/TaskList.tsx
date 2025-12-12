@@ -7,7 +7,7 @@ function TaskList({ tasks, setTasks }: { tasks: ITask[], setTasks: any }) {
         <>
             <ul>
                 {tasks.map((task) => (
-                    <Task key={task.id} id={task.id} text={task.title} completed={task.completed} date={task.finishDate} setTasks={setTasks} />
+                    <Task key={task.id} id={task.id} text={task.title} subject={task.subject} completed={task.completed} date={task.finishDate} setTasks={setTasks} />
                 ))}
             </ul>
         </>

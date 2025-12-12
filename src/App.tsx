@@ -6,6 +6,7 @@ import CreateTask from './components/CreateTask'
 export interface ITask {
   id: string,
   title: string,
+  subject: string,
   completed: boolean,
   finishDate: number
 }
