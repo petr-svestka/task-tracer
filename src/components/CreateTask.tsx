@@ -1,43 +1,109 @@
-import { useState } from 'react'
-import '../App.css'
-import { DATABASE_URL, FetchDatabase } from '../App'
+import { useState } from 'react';
+import './CreateTask.css';
+import type { Task } from '../types';
+import { API_URL } from '../App';
 
-function CreateTask({ setTasks }: { setTasks: any }) {
+function getAuthUserId(): number | null {
+    const raw = localStorage.getItem('authUser');
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw) as { id: number };
+        return parsed.id;
+    } catch {
+        return null;
+    }
+}
 
-    const [description, setDescription] = useState<string>("")
-    const [date, setDate] = useState<Date>(new Date())
-    const [subject, setSubject] = useState<string>("")
+function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateAction<Task[]>> }) {
+    const [description, setDescription] = useState<string>('');
+    const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [subject, setSubject] = useState<string>('');
 
+    const handleCreate = async () => {
+        const userId = getAuthUserId();
+        if (!userId) {
+            alert('You must be logged in');
+            return;
+        }
+
+        if (!description.trim() || !subject.trim()) {
+            alert('Please fill out all fields.');
+            return;
+        }
+
+        try {
+            const payload = {
+                userId,
+                title: description.trim(),
+                completed: false,
+                finishDate: new Date(date).getTime(),
+                subject: subject.trim(),
+            };
+
+            const res = await fetch(`${API_URL}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || `HTTP ${res.status}`);
+            }
+
+            const newTask = (await res.json()) as Task;
+            setTasks((prevTasks) => [...prevTasks, newTask]);
+
+            // Clear form
+            setDescription('');
+            setDate(new Date().toISOString().split('T')[0]);
+            setSubject('');
+        } catch (error) {
+            console.error('Error creating task:', error);
+            alert('Task creation failed. Is json-server running on :3000?');
+        }
+    };
 
     return (
-        <div id="create_task">
-            <label htmlFor="description">Popis:</label>
-            <input type="text" id="description" onInput={(e) => setDescription((e.target as HTMLInputElement).value)} />
-            <label htmlFor="date">Datum odevzdání:</label>
-            <input type='date' id='date' min={new Date(Date.now()).toISOString().split('T')[0]} onInput={(e) => setDate(new Date((e.target as HTMLInputElement).value))}></input>
-            <label htmlFor="subject">Předmět:</label>
-            <input type="text" id="subject" onInput={(e) => setSubject((e.target as HTMLInputElement).value)} />
-            <button onClick={() => HandleCreate(description, setTasks, date, subject)}>Create</button>
+        <div className="create-task-container">
+            <h3>Create a New Task</h3>
+            <div className="create-task-form">
+                <div className="form-group">
+                    <label htmlFor="description">Description:</label>
+                    <input
+                        type="text"
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="subject">Subject:</label>
+                    <input
+                        type="text"
+                        id="subject"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="date">Due Date:</label>
+                    <input
+                        type="date"
+                        id="date"
+                        value={date}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setDate(e.target.value)}
+                    />
+                </div>
+                <button className="create-task-button" onClick={handleCreate}>
+                    Create Task
+                </button>
+            </div>
         </div>
-    )
+    );
 }
 
-function HandleCreate(description: string, setTasks: any, date: Date, subject: string) {
-    if (description == "")
-        return;
-
-    if (subject == "")
-        return;
-
-    fetch(DATABASE_URL + '/tasks', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ title: description, completed: false, finishDate: date.getTime(), subject: subject })
-    })
-
-    FetchDatabase(setTasks);
-}
-
-export default CreateTask
+export default CreateTask;

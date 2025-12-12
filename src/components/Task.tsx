@@ -1,38 +1,56 @@
-import { useState } from "react";
-import { DATABASE_URL, FetchDatabase } from "../App";
+import './Task.css';
+import type { Task as TaskType } from '../types';
+import { API_URL } from '../App';
 
 
-export function Task({ id, text, subject, completed, date, setTasks }: { id: string, text: string, subject: string, completed: boolean, date: number, setTasks: any }) {
-    const [completedState, setCompleted] = useState(completed);
+export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispatch<React.SetStateAction<TaskType[]>> }) {
+    const handleToggleComplete = async () => {
+        try {
+            const updatedTask: TaskType = { ...task, completed: !task.completed };
+            await fetch(`${API_URL}/tasks/${task.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedTask),
+            });
+            setTasks((prevTasks) => prevTasks.map((t) => (t.id === task.id ? updatedTask : t)));
+        } catch (error) {
+            console.error('Error updating task:', error);
+            alert('Failed to update task');
+        }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await fetch(`${API_URL}/tasks/${task.id}`, {
+                method: 'DELETE',
+            });
+            setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            alert('Failed to delete task');
+        }
+    };
 
     return (
-        <li>
-            <input type='checkbox' checked={completedState} onChange={(e) => { handleCheck(e.target.checked, text, setCompleted, setTasks, id) }}></input>
-            <p>{"Datum odevzdání: " + new Date(date).toISOString().split('T')[0]}</p>
-            <p className={completedState ? 'checked' : ''}>{"Popis: " + text + " | " + "Předmět: " + subject}</p>
-            <button onClick={() => HandleDelete(id, setTasks)}>Remove</button>
+        <li className={`task-item ${task.completed ? 'completed' : ''}`}>
+            <input
+                type="checkbox"
+                className="task-checkbox"
+                checked={task.completed}
+                onChange={handleToggleComplete}
+            />
+            <div className="task-details">
+                <span className="task-title">{task.title}</span>
+                <span className="task-subject">{task.subject}</span>
+                <span className="task-date">Due: {new Date(task.finishDate).toLocaleDateString()}</span>
+            </div>
+            <div className="task-actions">
+                <button className="task-delete-button" onClick={handleDelete}>
+                    Remove
+                </button>
+            </div>
         </li>
-    )
-}
-
-function handleCheck(checked: boolean, text: string, setCompleted: any, setTasks: any, id: string) {
-    setCompleted(checked);
-
-    fetch(DATABASE_URL + '/tasks/' + id, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ title: text, completed: checked })
-    });
-
-    FetchDatabase(setTasks);
-}
-
-function HandleDelete(id: string, setTasks: any) {
-    fetch(DATABASE_URL + '/tasks/' + id, {
-        method: 'DELETE',
-    })
-
-    FetchDatabase(setTasks);
+    );
 }
