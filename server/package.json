@@ -1,0 +1,10 @@
+{
+    "name": "todo-list-server",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch index.ts",
+        "start": "node ../dist-server/index.js",
+        "build": "tsc -p tsconfig.json"
+    }
+}

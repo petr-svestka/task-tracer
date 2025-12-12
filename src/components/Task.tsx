@@ -3,18 +3,36 @@ import type { Task as TaskType } from '../types';
 import { API_URL } from '../App';
 
 
+type AuthUser = { id: number; username: string; token: string };
+
+function getAuthUser(): AuthUser | null {
+    const raw = localStorage.getItem('authUser');
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw) as AuthUser;
+    } catch {
+        return null;
+    }
+}
+
 export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispatch<React.SetStateAction<TaskType[]>> }) {
     const handleToggleComplete = async () => {
+        const user = getAuthUser();
+        if (!user?.token) return;
+
         try {
             const updatedTask: TaskType = { ...task, completed: !task.completed };
-            await fetch(`${API_URL}/tasks/${task.id}`, {
+            const res = await fetch(`${API_URL}/tasks/${task.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
                 },
                 body: JSON.stringify(updatedTask),
             });
-            setTasks((prevTasks) => prevTasks.map((t) => (t.id === task.id ? updatedTask : t)));
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const saved = (await res.json()) as TaskType;
+            setTasks((prev) => prev.map((t) => (t.id === task.id ? saved : t)));
         } catch (error) {
             console.error('Error updating task:', error);
             alert('Failed to update task');
@@ -22,11 +40,16 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
     };
 
     const handleDelete = async () => {
+        const user = getAuthUser();
+        if (!user?.token) return;
+
         try {
-            await fetch(`${API_URL}/tasks/${task.id}`, {
+            const res = await fetch(`${API_URL}/tasks/${task.id}`, {
                 method: 'DELETE',
+                headers: { Authorization: `Bearer ${user.token}` },
             });
-            setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            setTasks((prev) => prev.filter((t) => t.id !== task.id));
         } catch (error) {
             console.error('Error deleting task:', error);
             alert('Failed to delete task');

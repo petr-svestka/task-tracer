@@ -1,11 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RegisterPage.css';
-import type { User } from '../types';
 import { API_URL } from '../App';
 
 const RegisterPage: React.FC = () => {
-    // Basic form state
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -19,30 +17,38 @@ const RegisterPage: React.FC = () => {
             return;
         }
 
+        if (password.length < 4) {
+            alert('Password must be at least 4 characters');
+            return;
+        }
+
         if (password !== confirmPassword) {
             alert("Passwords don't match!");
             return;
         }
 
         try {
-            const existingRes = await fetch(`${API_URL}/users?username=${encodeURIComponent(username)}`);
-            const existing = (await existingRes.json()) as User[];
-            if (existing.length) {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+
+            if (res.status === 409) {
                 alert('Username already exists');
                 return;
             }
 
-            await fetch(`${API_URL}/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || `HTTP ${res.status}`);
+            }
 
             alert('Registration successful! Please log in.');
             navigate('/login');
         } catch (err) {
             console.error(err);
-            alert('Registration failed. Is json-server running?');
+            alert('Registration failed. Is the API running on :5000 and Redis on :6379?');
         }
     };
 

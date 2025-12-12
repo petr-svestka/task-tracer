@@ -3,12 +3,13 @@ import './CreateTask.css';
 import type { Task } from '../types';
 import { API_URL } from '../App';
 
-function getAuthUserId(): number | null {
+type AuthUser = { id: number; username: string; token: string };
+
+function getAuthUser(): AuthUser | null {
     const raw = localStorage.getItem('authUser');
     if (!raw) return null;
     try {
-        const parsed = JSON.parse(raw) as { id: number };
-        return parsed.id;
+        return JSON.parse(raw) as AuthUser;
     } catch {
         return null;
     }
@@ -20,8 +21,8 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
     const [subject, setSubject] = useState<string>('');
 
     const handleCreate = async () => {
-        const userId = getAuthUserId();
-        if (!userId) {
+        const user = getAuthUser();
+        if (!user?.token) {
             alert('You must be logged in');
             return;
         }
@@ -33,9 +34,7 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
 
         try {
             const payload = {
-                userId,
                 title: description.trim(),
-                completed: false,
                 finishDate: new Date(date).getTime(),
                 subject: subject.trim(),
             };
@@ -44,6 +43,7 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -54,15 +54,14 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
             }
 
             const newTask = (await res.json()) as Task;
-            setTasks((prevTasks) => [...prevTasks, newTask]);
+            setTasks((prev) => [...prev, newTask]);
 
-            // Clear form
             setDescription('');
             setDate(new Date().toISOString().split('T')[0]);
             setSubject('');
         } catch (error) {
             console.error('Error creating task:', error);
-            alert('Task creation failed. Is json-server running on :3000?');
+            alert('Task creation failed. Is the API running on :5000?');
         }
     };
 
@@ -81,12 +80,7 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
                 </div>
                 <div className="form-group">
                     <label htmlFor="subject">Subject:</label>
-                    <input
-                        type="text"
-                        id="subject"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                    />
+                    <input type="text" id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
                 </div>
                 <div className="form-group">
                     <label htmlFor="date">Due Date:</label>

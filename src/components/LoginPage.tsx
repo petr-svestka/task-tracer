@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
-import type { User } from '../types';
 import { API_URL } from '../App';
+
+type LoginResponse = { token: string; user: { id: number; username: string } };
 
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -13,20 +14,23 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
 
         try {
-            const res = await fetch(`${API_URL}/users?username=${encodeURIComponent(username)}`);
-            const users = (await res.json()) as User[];
-            const user = users[0];
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
 
-            if (!user || user.password !== password) {
-                alert('Invalid username or password');
-                return;
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || `HTTP ${res.status}`);
             }
 
-            localStorage.setItem('authUser', JSON.stringify({ id: user.id, username: user.username }));
+            const data = (await res.json()) as LoginResponse;
+            localStorage.setItem('authUser', JSON.stringify({ ...data.user, token: data.token }));
             navigate('/');
         } catch (err) {
             console.error(err);
-            alert('Login failed. Is json-server running?');
+            alert('Login failed. Is the API running on :5000 and Redis on :6379?');
         }
     };
 

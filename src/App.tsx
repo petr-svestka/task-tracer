@@ -7,9 +7,9 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import type { Task } from './types';
 
-export const API_URL = 'http://localhost:3000';
+export const API_URL = 'http://localhost:5000';
 
-type AuthUser = { id: number; username: string };
+type AuthUser = { id: number; username: string; token: string };
 
 function getAuthUser(): AuthUser | null {
   const raw = localStorage.getItem('authUser');
@@ -27,9 +27,14 @@ function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTasks = async (userId: number) => {
+    const fetchTasks = async (token: string) => {
       try {
-        const res = await fetch(`${API_URL}/tasks?userId=${userId}`);
+        const res = await fetch(`${API_URL}/tasks`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as Task[];
         setTasks(data);
       } catch (error) {
@@ -39,19 +44,29 @@ function App() {
 
     const user = getAuthUser();
 
-    // Protect the app routes
     if (location.pathname === '/' && !user) {
       navigate('/login');
       return;
     }
 
     if (location.pathname === '/' && user) {
-      fetchTasks(user.id);
+      fetchTasks(user.token);
     }
   }, [location.pathname, navigate]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const user = getAuthUser();
     localStorage.removeItem('authUser');
+    try {
+      if (user?.token) {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+      }
+    } catch {
+      // ignore
+    }
     navigate('/login');
   };
 
