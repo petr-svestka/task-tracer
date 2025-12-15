@@ -78,7 +78,11 @@ export async function attachSocketIo(opts: {
     sub.on('message', (_channel, message) => {
         try {
             const evt = JSON.parse(message) as TaskEvent;
-            io.to(`user:${evt.userId}`).emit('task:event', evt);
+            if (evt.userId === -1) {
+                io.emit('task:event', evt);
+            } else {
+                io.to(`user:${evt.userId}`).emit('task:event', evt);
+            }
         } catch {
             // ignore
         }

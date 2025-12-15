@@ -4,6 +4,7 @@ export type StoredUser = {
     id: number;
     username: string;
     passwordHash: string;
+    role?: 'student' | 'teacher';
     createdAt: number;
 };
 

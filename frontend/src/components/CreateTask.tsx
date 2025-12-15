@@ -3,7 +3,7 @@ import './CreateTask.css';
 import type { Task } from '../types';
 import { API_URL } from '../config';
 
-type AuthUser = { id: number; username: string; token: string };
+type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
 
 function getAuthUser(): AuthUser | null {
     const raw = localStorage.getItem('authUser');
@@ -16,6 +16,8 @@ function getAuthUser(): AuthUser | null {
 }
 
 function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateAction<Task[]>> }) {
+    const auth = getAuthUser();
+    if (auth?.role !== 'teacher') return null;
     const [description, setDescription] = useState<string>('');
     const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState<string>('');

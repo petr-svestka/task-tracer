@@ -9,7 +9,7 @@ import Notifications from './components/Notifications';
 import type { Task } from './types';
 import { API_URL, SOCKET_URL } from './config';
 
-type AuthUser = { id: number; username: string; token: string };
+type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
 
 function getAuthUser(): AuthUser | null {
   const raw = localStorage.getItem('authUser');

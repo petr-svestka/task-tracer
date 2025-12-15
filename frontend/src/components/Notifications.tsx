@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Notification } from '../types';
 import { API_URL } from '../config';
 
-type AuthUser = { id: number; username: string; token: string };
+type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
 
 function getAuthUser(): AuthUser | null {
   const raw = localStorage.getItem('authUser');

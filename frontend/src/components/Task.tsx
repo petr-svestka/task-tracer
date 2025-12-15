@@ -3,7 +3,7 @@ import type { Task as TaskType } from '../types';
 import { API_URL } from '../config';
 
 
-type AuthUser = { id: number; username: string; token: string };
+type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
 
 function getAuthUser(): AuthUser | null {
     const raw = localStorage.getItem('authUser');
@@ -21,15 +21,14 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
         if (!user?.token) return;
 
         try {
-            const updatedTask: TaskType = { ...task, completed: !task.completed };
-            const res = await fetch(`${API_URL}/tasks/${task.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${user.token}`,
-                },
-                body: JSON.stringify(updatedTask),
-            });
+                const res = await fetch(`${API_URL}/tasks/${task.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${user.token}`,
+                    },
+                    body: JSON.stringify({ completed: !task.completed }),
+                });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const saved = (await res.json()) as TaskType;
             setTasks((prev) => prev.map((t) => (t.id === task.id ? saved : t)));
@@ -56,6 +55,8 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
         }
     };
 
+    const currentUser = getAuthUser();
+
     return (
         <li className={`task-item ${task.completed ? 'completed' : ''}`}>
             <input
@@ -70,9 +71,11 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
                 <span className="task-date">Due: {new Date(task.finishDate).toLocaleDateString()}</span>
             </div>
             <div className="task-actions">
-                <button className="task-delete-button" onClick={handleDelete}>
-                    Remove
-                </button>
+                {currentUser?.role === 'teacher' && currentUser.id === task.userId ? (
+                    <button className="task-delete-button" onClick={handleDelete}>
+                        Remove
+                    </button>
+                ) : null}
             </div>
         </li>
     );

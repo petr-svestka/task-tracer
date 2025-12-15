@@ -7,6 +7,7 @@ const RegisterPage: React.FC = () => {
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
+    const [role, setRole] = React.useState<'student' | 'teacher'>('student');
     const navigate = useNavigate();
 
     const handleRegister = async (e: React.FormEvent) => {
@@ -31,7 +32,7 @@ const RegisterPage: React.FC = () => {
             const res = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({ username, password, role }),
             });
 
             if (res.status === 409) {
@@ -89,6 +90,13 @@ const RegisterPage: React.FC = () => {
                             required
                             autoComplete="new-password"
                         />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="role">Role</label>
+                        <select id="role" value={role} onChange={(e) => setRole(e.target.value as 'student' | 'teacher')}>
+                            <option value="student">Student (default)</option>
+                            <option value="teacher">Teacher</option>
+                        </select>
                     </div>
                     <button type="submit" className="register-button">
                         Register

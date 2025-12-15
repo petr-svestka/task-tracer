@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { API_URL } from '../config';
 
-type LoginResponse = { token: string; user: { id: number; username: string } };
+type LoginResponse = { token: string; user: { id: number; username: string; role?: 'student' | 'teacher' } };
 
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
