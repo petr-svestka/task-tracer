@@ -1,4 +1,5 @@
-FROM node:22-alpine
+# Build stage
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -9,6 +10,14 @@ COPY index.html vite.config.ts tsconfig*.json eslint.config.js ./
 COPY public ./public
 COPY src ./src
 
-EXPOSE 5173
+RUN npm run build
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Nginx stage
+FROM nginx:alpine AS nginx
+
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

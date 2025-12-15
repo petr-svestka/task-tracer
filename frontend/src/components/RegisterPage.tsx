@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RegisterPage.css';
-import { API_URL } from '../App';
+import { API_URL } from '../config';
 
 const RegisterPage: React.FC = () => {
     const [username, setUsername] = React.useState('');

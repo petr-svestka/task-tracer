@@ -5,6 +5,11 @@ import { createServer } from 'node:http';
 import { redis } from './redis.js';
 import { signJwt, verifyJwt } from './jwt.js';
 import { attachSocketIo } from './socket.js';
+import { appendTaskEvent } from './streams.js';
+
+// Keys / streams required by assignment
+const TASK_EVENTS_CHANNEL = 'task-events';
+const NOTIFICATIONS_STREAM = 'notifications';
 
 type AuthUser = { id: number; username: string };
 type User = { id: number; username: string; passwordHash: string; createdAt: number };
@@ -31,8 +36,6 @@ const PORT = Number(process.env.PORT || 5000);
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const JWT_TTL_SECONDS = Number(process.env.JWT_TTL_SECONDS || 60 * 60 * 24 * 7);
 const TASK_TTL_SECONDS = Number(process.env.TASK_TTL_SECONDS || 60 * 60 * 24 * 30);
-
-const TASK_EVENTS_CHANNEL = 'task-events';
 
 function now() {
     return Date.now();
@@ -104,6 +107,35 @@ function requireAuth(
     };
 }
 
+async function pushNotification(evt: {
+    userId: number;
+    type: 'task.created' | 'task.updated' | 'task.deleted' | 'task.completed';
+    taskId: string;
+    message: string;
+}) {
+    // Redis Streams for notifications history (assignment expects Streams usage)
+    await redis.xadd(
+        NOTIFICATIONS_STREAM,
+        '*',
+        'userId',
+        String(evt.userId),
+        'type',
+        evt.type,
+        'taskId',
+        evt.taskId,
+        'message',
+        evt.message,
+        'ts',
+        String(Date.now()),
+    );
+
+    // Also publish to Socket.IO bridge
+    await redis.publish(
+        TASK_EVENTS_CHANNEL,
+        JSON.stringify({ type: 'notification.created', userId: evt.userId, taskId: evt.taskId, message: evt.message }),
+    );
+}
+
 app.get('/health', async (_req, res) => {
     try {
         await redis.ping();
@@ -144,9 +176,10 @@ app.post('/auth/register', async (req, res) => {
         createdAt: now(),
     };
 
+    // Store user as RedisJSON document (Redis Stack requirement)
     await redis
         .multi()
-        .set(userKey(id), JSON.stringify(user))
+        .call('JSON.SET', userKey(id), '$', JSON.stringify(user))
         .set(userByUsernameKey(uname), String(id))
         .exec();
 
@@ -167,7 +200,7 @@ app.post('/auth/login', async (req, res) => {
         return;
     }
 
-    const userRaw = await redis.get(userKey(Number(userIdRaw)));
+    const userRaw = (await redis.call('JSON.GET', userKey(Number(userIdRaw)))) as string | null;
     if (!userRaw) {
         res.status(401).json({ error: 'invalid credentials' } satisfies ApiError);
         return;
@@ -204,8 +237,8 @@ app.get(
             res.json([]);
             return;
         }
-        const raws = await redis.mget(ids.map(taskKey));
-        const tasks = raws.filter(Boolean).map((r: string | null) => JSON.parse(r as string) as Task);
+        const raws = (await Promise.all(ids.map((id) => redis.call('JSON.GET', taskKey(id))))) as Array<string | null>;
+        const tasks = raws.filter(Boolean).map((r) => JSON.parse(r as string) as Task);
         res.json(tasks);
     }),
 );
@@ -234,10 +267,19 @@ app.post(
 
         await redis
             .multi()
-            .set(taskKey(id), JSON.stringify(task), 'EX', TASK_TTL_SECONDS)
+            .call('JSON.SET', taskKey(id), '$', JSON.stringify(task))
+            .expire(taskKey(id), TASK_TTL_SECONDS)
             .zadd(tasksByUserKey(user.id), t, id)
             .publish(TASK_EVENTS_CHANNEL, JSON.stringify({ type: 'task.created', userId: user.id, taskId: id }))
             .exec();
+
+        await appendTaskEvent({ type: 'task.created', userId: user.id, taskId: id });
+        await pushNotification({
+            userId: user.id,
+            type: 'task.created',
+            taskId: id,
+            message: `New task created: ${task.title} (${task.subject})`,
+        });
 
         res.status(201).json(task);
     }),
@@ -247,7 +289,7 @@ app.put(
     '/tasks/:id',
     requireAuth(async (req, res, user) => {
         const id = req.params.id;
-        const raw = await redis.get(taskKey(id));
+        const raw = (await redis.call('JSON.GET', taskKey(id))) as string | null;
         if (!raw) {
             res.status(404).json({ error: 'not found' } satisfies ApiError);
             return;
@@ -273,8 +315,31 @@ app.put(
             updatedAt: now(),
         };
 
-        await redis.set(taskKey(id), JSON.stringify(updated), 'EX', TASK_TTL_SECONDS);
-        await redis.publish(TASK_EVENTS_CHANNEL, JSON.stringify({ type: 'task.updated', userId: user.id, taskId: id }));
+        await redis
+            .multi()
+            .call('JSON.SET', taskKey(id), '$', JSON.stringify(updated))
+            .expire(taskKey(id), TASK_TTL_SECONDS)
+            .publish(TASK_EVENTS_CHANNEL, JSON.stringify({ type: 'task.updated', userId: user.id, taskId: id }))
+            .exec();
+
+        await appendTaskEvent({ type: 'task.updated', userId: user.id, taskId: id });
+
+        if (!current.completed && updated.completed) {
+            await pushNotification({
+                userId: user.id,
+                type: 'task.completed',
+                taskId: id,
+                message: `Task completed: ${updated.title}`,
+            });
+        } else {
+            await pushNotification({
+                userId: user.id,
+                type: 'task.updated',
+                taskId: id,
+                message: `Task updated: ${updated.title}`,
+            });
+        }
+
         res.json(updated);
     }),
 );
@@ -283,11 +348,12 @@ app.delete(
     '/tasks/:id',
     requireAuth(async (req, res, user) => {
         const id = req.params.id;
-        const raw = await redis.get(taskKey(id));
+        const raw = (await redis.call('JSON.GET', taskKey(id))) as string | null;
         if (!raw) {
             res.status(404).json({ error: 'not found' } satisfies ApiError);
             return;
         }
+
         const task = JSON.parse(raw) as Task;
         if (task.userId !== user.id) {
             res.status(403).json({ error: 'forbidden' } satisfies ApiError);
@@ -301,13 +367,69 @@ app.delete(
             .publish(TASK_EVENTS_CHANNEL, JSON.stringify({ type: 'task.deleted', userId: user.id, taskId: id }))
             .exec();
 
+        await appendTaskEvent({ type: 'task.deleted', userId: user.id, taskId: id });
+        await pushNotification({
+            userId: user.id,
+            type: 'task.deleted',
+            taskId: id,
+            message: `Task deleted: ${task.title}`,
+        });
+
         res.json({ ok: true });
     }),
 );
 
-const httpServer = createServer(app);
-attachSocketIo({ httpServer, jwtSecret: JWT_SECRET });
+// --- Notifications (history) ---
+app.get(
+    '/notifications',
+    requireAuth(async (req, res, user) => {
+        const fromId = typeof req.query.from === 'string' ? req.query.from : '$';
+        const count = Number(req.query.count || 30);
 
-httpServer.listen(PORT, () => {
+        // XRANGE is simpler for a timeline; for incremental polling client can pass ?from=<lastId>
+        const start = fromId === '$' ? '-' : `(${fromId}`;
+
+        type StreamEntry = [string, string[]];
+        const entries = (await redis.xrange(
+            NOTIFICATIONS_STREAM,
+            start,
+            '+',
+            'COUNT',
+            String(count),
+        )) as unknown as StreamEntry[];
+
+        type RawNotif = {
+            id: string;
+            userId?: string;
+            type?: string;
+            taskId?: string;
+            message?: string;
+            ts?: string;
+        };
+
+        const items = entries
+            .map((e): RawNotif => {
+                const [id, fields] = e;
+                const obj: Record<string, string> = {};
+                for (let i = 0; i < fields.length; i += 2) obj[fields[i]] = fields[i + 1];
+                return { id, ...obj };
+            })
+            .filter((n) => Number(n.userId ?? -1) === user.id)
+            .map((n) => ({
+                id: n.id,
+                type: n.type ?? 'unknown',
+                taskId: n.taskId ?? '',
+                message: n.message ?? '',
+                ts: Number(n.ts ?? '0'),
+            }));
+
+        res.json(items);
+    }),
+);
+
+const server = createServer(app);
+attachSocketIo({ httpServer: server, jwtSecret: JWT_SECRET });
+
+server.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
 });

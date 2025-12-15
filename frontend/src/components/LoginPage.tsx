@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
-import { API_URL } from '../App';
+import { API_URL } from '../config';
 
 type LoginResponse = { token: string; user: { id: number; username: string } };
 

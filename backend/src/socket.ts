@@ -7,7 +7,29 @@ import { verifyJwt } from './jwt.js';
 
 type AuthUser = { id: number; username: string };
 
-type TaskEvent = { type: 'task.created' | 'task.updated' | 'task.deleted'; userId: number; taskId: string };
+type TaskEvent =
+    | { type: 'task.created' | 'task.updated' | 'task.deleted'; userId: number; taskId: string }
+    | { type: 'notification.created'; userId: number; taskId: string; message: string };
+
+function onceReady(client: Redis) {
+    return new Promise<void>((resolve, reject) => {
+        if (client.status === 'ready') return resolve();
+        const onReady = () => {
+            cleanup();
+            resolve();
+        };
+        const onError = (err: unknown) => {
+            cleanup();
+            reject(err);
+        };
+        const cleanup = () => {
+            client.off('ready', onReady);
+            client.off('error', onError);
+        };
+        client.once('ready', onReady);
+        client.once('error', onError);
+    });
+}
 
 export async function attachSocketIo(opts: {
     httpServer: HttpServer;
@@ -18,9 +40,11 @@ export async function attachSocketIo(opts: {
     });
 
     // Socket.IO Redis adapter (separate connections recommended)
+    // NOTE: ioredis auto-connects; calling .connect() can break depending on version/config.
     const pubClient = new Redis({ host: process.env.REDIS_HOST || '127.0.0.1', port: Number(process.env.REDIS_PORT || 6379) });
     const subClient = pubClient.duplicate();
-    await Promise.all([pubClient.connect(), subClient.connect()].map(p => p.catch(() => undefined)));
+
+    await Promise.all([onceReady(pubClient), onceReady(subClient)]);
     io.adapter(createAdapter(pubClient, subClient));
 
     io.use((socket: Socket, next: (err?: Error) => void) => {
@@ -39,12 +63,18 @@ export async function attachSocketIo(opts: {
 
     io.on('connection', (socket: Socket) => {
         const user = (socket.data as { user?: AuthUser }).user;
-        if (user) socket.join(`user:${user.id}`);
+        if (user) {
+            socket.join(`user:${user.id}`);
+            console.log('[socket] connected', { userId: user.id });
+        }
     });
 
     // Bridge Redis Pub/Sub -> Socket.IO rooms
     const sub = redis.duplicate();
-    sub.subscribe('task-events');
+    sub.on('error', (e) => console.error('[socket] bridge redis error', e));
+    sub.subscribe('task-events', (err) => {
+        if (err) console.error('[socket] subscribe error', err);
+    });
     sub.on('message', (_channel, message) => {
         try {
             const evt = JSON.parse(message) as TaskEvent;

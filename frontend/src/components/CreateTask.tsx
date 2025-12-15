@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './CreateTask.css';
 import type { Task } from '../types';
-import { API_URL } from '../App';
+import { API_URL } from '../config';
 
 type AuthUser = { id: number; username: string; token: string };
 
@@ -54,7 +54,12 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
             }
 
             const newTask = (await res.json()) as Task;
-            setTasks((prev) => [...prev, newTask]);
+            setTasks((prev) => {
+                const next = [newTask, ...prev];
+                // keep consistent ordering with backend (newest first)
+                next.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+                return next;
+            });
 
             setDescription('');
             setDate(new Date().toISOString().split('T')[0]);

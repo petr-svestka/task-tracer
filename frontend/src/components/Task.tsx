@@ -1,6 +1,6 @@
 import './Task.css';
 import type { Task as TaskType } from '../types';
-import { API_URL } from '../App';
+import { API_URL } from '../config';
 
 
 type AuthUser = { id: number; username: string; token: string };
