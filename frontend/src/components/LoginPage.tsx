@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
             navigate('/');
         } catch (err) {
             console.error(err);
-            alert('Login failed. Is the API running on :5000 and Redis on :6379?');
+            alert('Login failed. Is your account actually created?');
         }
     };
 

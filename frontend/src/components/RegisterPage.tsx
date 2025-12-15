@@ -49,7 +49,7 @@ const RegisterPage: React.FC = () => {
             navigate('/login');
         } catch (err) {
             console.error(err);
-            alert('Registration failed. Is the API running on :5000 and Redis on :6379?');
+            alert('Registration failed. Are the fields correct?');
         }
     };
 

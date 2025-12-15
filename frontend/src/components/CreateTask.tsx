@@ -68,7 +68,7 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
             setSubject('');
         } catch (error) {
             console.error('Error creating task:', error);
-            alert('Task creation failed. Is the API running on :5000?');
+            alert('Task creation failed. Are you sure you have the Teacher role?');
         }
     };
 
