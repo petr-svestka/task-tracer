@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { API_URL } from '../config';
@@ -9,6 +9,14 @@ const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const flag = localStorage.getItem('sessionInvalid');
+        if (flag) {
+            localStorage.removeItem('sessionInvalid');
+            alert('Session invalid or expired. Please login.');
+        }
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

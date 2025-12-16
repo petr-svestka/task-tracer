@@ -22,6 +22,31 @@ function getAuthUser(): AuthUser | null {
 }
 
 function App() {
+  // Install global fetch wrapper once: on any 401 response clear session,
+  // mark session invalid and redirect to login so client shows alert there.
+  useEffect(() => {
+    if ((window as any).__authFetchPatched) return;
+    (window as any).__authFetchPatched = true;
+
+    const orig = window.fetch.bind(window);
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      try {
+        const res = await orig(...args);
+        if (res.status === 401) {
+          try {
+            localStorage.removeItem('authUser');
+            localStorage.setItem('sessionInvalid', '1');
+            window.location.href = '/login';
+          } catch {
+            // ignore
+          }
+        }
+        return res;
+      } catch (e) {
+        throw e;
+      }
+    };
+  }, []);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filterCompleted, setFilterCompleted] = useState<'all' | 'open' | 'done'>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
