@@ -49,3 +49,10 @@ button:hover {
 button:active {
   transform: translateY(1px);
 }
+
+/* Toasts (react-hot-toast) */
+.app-toast {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.1px;
+}

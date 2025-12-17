@@ -192,10 +192,6 @@ function App() {
         startPollingFallback();
       });
 
-      socket.on('disconnect', () => {
-        startPollingFallback();
-      });
-
       socket.on('task:event', async (evt: unknown) => {
         setRtEvents((prev) => [...prev.slice(-49), evt]);
         await refreshTasks();
