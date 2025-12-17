@@ -10,78 +10,78 @@ import type { Task } from './types';
 import { API_URL, SOCKET_URL } from './config';
 import { getAuthUser } from './auth';
 
+type PatchedWindow = Window & { __authFetchPatched?: boolean };
+
 function App() {
   // Install global fetch wrapper once: on any 401 response clear session,
   // mark session invalid and redirect to login so client shows alert there.
   useEffect(() => {
-    if ((window as any).__authFetchPatched) return;
-    (window as any).__authFetchPatched = true;
+    const w = window as PatchedWindow;
+    if (w.__authFetchPatched) return;
+    w.__authFetchPatched = true;
 
     const orig = window.fetch.bind(window);
     window.fetch = async (...args: Parameters<typeof fetch>) => {
-      try {
-        const tokenFromArgs = () => {
-          const input = args[0];
-          const init = args[1] as RequestInit | undefined;
+      const tokenFromArgs = () => {
+        const input = args[0];
+        const init = args[1] as RequestInit | undefined;
 
-          const readAuthHeader = (headers: HeadersInit | undefined): string | null => {
-            if (!headers) return null;
-            if (headers instanceof Headers) return headers.get('authorization') ?? headers.get('Authorization');
-            if (Array.isArray(headers)) {
-              const found = headers.find(([k]) => k.toLowerCase() === 'authorization');
-              return found?.[1] ?? null;
-            }
-            const obj = headers as Record<string, string>;
-            return obj.authorization ?? obj.Authorization ?? null;
-          };
-
-          let authHeader: string | null = null;
-          if (input instanceof Request) authHeader = input.headers.get('authorization') ?? input.headers.get('Authorization');
-          if (!authHeader) authHeader = readAuthHeader(init?.headers);
-          if (!authHeader) return null;
-
-          const m = authHeader.match(/^\s*Bearer\s+(.+)\s*$/i);
-          return m?.[1] ?? null;
+        const readAuthHeader = (headers: HeadersInit | undefined): string | null => {
+          if (!headers) return null;
+          if (headers instanceof Headers) return headers.get('authorization') ?? headers.get('Authorization');
+          if (Array.isArray(headers)) {
+            const found = headers.find(([k]) => k.toLowerCase() === 'authorization');
+            return found?.[1] ?? null;
+          }
+          const obj = headers as Record<string, string>;
+          return obj.authorization ?? obj.Authorization ?? null;
         };
 
-        const requestToken = tokenFromArgs();
-        const res = await orig(...args);
-        if (res.status === 401) {
-          const urlFromArgs = () => {
-            const input = args[0];
-            if (typeof input === 'string') return input;
-            if (input instanceof Request) return input.url;
-            try {
-              return String(input);
-            } catch {
-              return '';
-            }
-          };
+        let authHeader: string | null = null;
+        if (input instanceof Request) authHeader = input.headers.get('authorization') ?? input.headers.get('Authorization');
+        if (!authHeader) authHeader = readAuthHeader(init?.headers);
+        if (!authHeader) return null;
 
-          const rawUrl = urlFromArgs();
-          let pathname = '';
+        const m = authHeader.match(/^\s*Bearer\s+(.+)\s*$/i);
+        return m?.[1] ?? null;
+      };
+
+      const requestToken = tokenFromArgs();
+      const res = await orig(...args);
+
+      if (res.status === 401) {
+        const urlFromArgs = () => {
+          const input = args[0];
+          if (typeof input === 'string') return input;
+          if (input instanceof Request) return input.url;
           try {
-            pathname = new URL(rawUrl, window.location.origin).pathname;
+            return String(input);
           } catch {
-            pathname = '';
+            return '';
           }
+        };
 
-          const isAuthEndpoint =
-            pathname.endsWith('/auth/login') ||
-            pathname.endsWith('/auth/logout') ||
-            pathname.endsWith('/auth/register');
+        const rawUrl = urlFromArgs();
+        let pathname = '';
+        try {
+          pathname = new URL(rawUrl, window.location.origin).pathname;
+        } catch {
+          pathname = '';
+        }
 
-          // If the user isn't logged in yet (e.g. wrong password on login),
-          // don't treat 401 as a "session expired" event.
-          const currentToken = getAuthUser()?.token;
-          const hadSession = Boolean(currentToken);
+        const isAuthEndpoint =
+          pathname.endsWith('/auth/login') || pathname.endsWith('/auth/logout') || pathname.endsWith('/auth/register');
 
-          // Avoid race: if an old/in-flight request returns 401 after a new login,
-          // don't wipe the freshly-created session.
-          const isCurrentRequest = requestToken && currentToken && requestToken === currentToken;
+        // If the user isn't logged in yet (e.g. wrong password on login),
+        // don't treat 401 as a "session expired" event.
+        const currentToken = getAuthUser()?.token;
+        const hadSession = Boolean(currentToken);
 
-          if (isAuthEndpoint || !hadSession || !isCurrentRequest) return res;
+        // Avoid race: if an old/in-flight request returns 401 after a new login,
+        // don't wipe the freshly-created session.
+        const isCurrentRequest = requestToken && currentToken && requestToken === currentToken;
 
+        if (!isAuthEndpoint && hadSession && isCurrentRequest) {
           try {
             localStorage.removeItem('authUser');
             localStorage.setItem('sessionInvalid', '1');
@@ -90,10 +90,9 @@ function App() {
             // ignore
           }
         }
-        return res;
-      } catch (e) {
-        throw e;
       }
+
+      return res;
     };
   }, []);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -230,49 +229,138 @@ function App() {
     navigate('/login');
   };
 
-  const MainApp = () => (
-    <div className="app-container">
-      <header className="app-header">
-        <div>
-          <h1>Task Tracker</h1>
-          {user ? <small style={{ color: '#666' }}>Signed in as {user.username}</small> : null}
-        </div>
-        <button onClick={handleLogout} className="logout-button">Logout</button>
-      </header>
+  const MainApp = () => {
+    const total = tasks.length;
+    const done = tasks.filter((t) => t.completed).length;
+    const open = total - done;
 
-      <div className="content-container">
-        <CreateTask setTasks={setTasks} />
+    const isTeacher = user?.role === 'teacher';
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Status</label>
-            <select
-              value={filterCompleted}
-              onChange={(e) => setFilterCompleted(e.target.value as 'All' | 'open' | 'done')}
-            >
-              <option value="All">All</option>
-              <option value="open">Open</option>
-              <option value="done">Done</option>
-            </select>
+    const userLabel = user ? `${user.username}${user.role ? ` • ${user.role}` : ''}` : '';
+
+    return (
+      <div className="shell">
+        <header className="topbar">
+          <div className="brand">
+            <div className="brand-mark" aria-hidden="true" />
+            <div className="brand-copy">
+              <div className="brand-title">Task Tracer</div>
+              <div className="brand-subtitle">Realtime classroom tasks</div>
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Subject</label>
-            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
-              {subjects.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+          <div className="topbar-right">
+            {user ? (
+              <div className="user-pill" title={userLabel}>
+                <span className="user-dot" aria-hidden="true" />
+                <span className="user-text">{userLabel}</span>
+              </div>
+            ) : null}
+            <button onClick={handleLogout} className="btn btn-ghost">
+              Sign out
+            </button>
           </div>
-        </div>
+        </header>
 
-        <TaskList tasks={filteredTasks} setTasks={setTasks} />
-        <Notifications events={rtEvents} />
+        <main className="dashboard">
+          <section className="hero">
+            <div className="hero-left">
+              <h1 className="hero-title">Your workspace</h1>
+              <p className="hero-desc">Stay on top of tasks with instant updates and a clean overview.</p>
+
+              <div className="stats">
+                <div className="stat">
+                  <div className="stat-k">{total}</div>
+                  <div className="stat-l">Total</div>
+                </div>
+
+                {isTeacher ? null : (
+                  <>
+                    <div className="stat">
+                      <div className="stat-k">{open}</div>
+                      <div className="stat-l">Open</div>
+                    </div>
+                    <div className="stat">
+                      <div className="stat-k">{done}</div>
+                      <div className="stat-l">Done</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="hero-right">
+              <div className="filters-card">
+                <div className="filters-head">
+                  <div>
+                    <div className="filters-title">Filters</div>
+                    <div className="filters-sub">Narrow down what you see</div>
+                  </div>
+                </div>
+
+                <div className="filters-grid">
+                  {!isTeacher ? (
+                    <div className="field">
+                      <label>Status</label>
+                      <select
+                        value={filterCompleted}
+                        onChange={(e) => setFilterCompleted(e.target.value as 'All' | 'open' | 'done')}
+                      >
+                        <option value="All">All</option>
+                        <option value="open">Open</option>
+                        <option value="done">Done</option>
+                      </select>
+                    </div>
+                  ) : null}
+
+                  <div className="field">
+                    <label>Subject</label>
+                    <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
+                      {subjects.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid">
+            <div className="panel">
+              <div className="panel-head">
+                <h2 className="panel-title">Tasks</h2>
+                <div className="panel-meta">Showing {filteredTasks.length} item(s)</div>
+              </div>
+              <TaskList tasks={filteredTasks} setTasks={setTasks} />
+            </div>
+
+            <aside className="side">
+              {isTeacher ? (
+                <div className="panel">
+                  <div className="panel-head">
+                    <h2 className="panel-title">Create</h2>
+                    <div className="panel-meta">Teacher only</div>
+                  </div>
+                  <CreateTask setTasks={setTasks} />
+                </div>
+              ) : null}
+
+              <div className="panel">
+                <div className="panel-head">
+                  <h2 className="panel-title">Activity</h2>
+                  <div className="panel-meta">Latest updates</div>
+                </div>
+                <Notifications events={rtEvents} />
+              </div>
+            </aside>
+          </section>
+        </main>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <Routes>

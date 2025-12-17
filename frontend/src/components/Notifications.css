@@ -1,0 +1,50 @@
+/* Modern Notifications */
+
+.notify {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.notify-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.notify-title {
+    font-weight: 900;
+    color: rgba(231, 234, 243, 0.92);
+}
+
+.notify-sub {
+    font-size: 0.8rem;
+    color: rgba(231, 234, 243, 0.65);
+}
+
+.notify-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.55rem;
+}
+
+.notify-item {
+    padding: 0.7rem 0.8rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(10, 14, 27, 0.55);
+    display: grid;
+    gap: 0.25rem;
+}
+
+.notify-msg {
+    color: rgba(231, 234, 243, 0.9);
+    font-size: 0.9rem;
+}
+
+.notify-ts {
+    color: rgba(231, 234, 243, 0.55);
+    font-size: 0.75rem;
+}

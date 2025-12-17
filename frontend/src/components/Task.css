@@ -1,68 +1,80 @@
 /* Task.css */
 .task-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.9rem;
     align-items: center;
-    padding: 1rem;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    transition: box-shadow 0.3s ease;
+    padding: 0.95rem;
+    background: rgba(10, 14, 27, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    transition: transform 0.08s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .task-item:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    border-color: rgba(110, 231, 183, 0.18);
 }
 
-.task-item.completed .task-details {
-    text-decoration: line-through;
-    color: #888;
+.task-item.completed {
+    border-color: rgba(110, 231, 183, 0.22);
 }
 
 .task-checkbox {
-    margin-right: 1rem;
+    width: 18px;
+    height: 18px;
+    accent-color: #6ee7b7;
     cursor: pointer;
 }
 
 .task-details {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
 }
 
 .task-title {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #333;
+    font-weight: 900;
+    font-size: 1rem;
+    color: rgba(231, 234, 243, 0.96);
 }
 
 .task-subject {
-    font-size: 0.9rem;
-    color: #666;
-    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: rgba(231, 234, 243, 0.68);
 }
 
 .task-date {
     font-size: 0.8rem;
-    color: #999;
-    margin-top: 0.5rem;
+    color: rgba(231, 234, 243, 0.55);
+}
+
+.task-item.completed .task-title,
+.task-item.completed .task-subject,
+.task-item.completed .task-date {
+    color: rgba(231, 234, 243, 0.48);
+    text-decoration: line-through;
 }
 
 .task-actions {
     display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 0.5rem;
 }
 
 .task-delete-button {
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    border: none;
-    background: #dc3545;
-    color: white;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.3s ease;
+    margin-left: auto;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(244, 63, 94, 0.14);
+    color: rgba(231, 234, 243, 0.95);
+    font-weight: 800;
+    font-size: 0.85rem;
 }
 
 .task-delete-button:hover {
-    background: #c82333;
+    background: rgba(244, 63, 94, 0.2);
 }

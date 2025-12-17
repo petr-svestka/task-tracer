@@ -3,6 +3,7 @@ import type { Notification } from '../types';
 import { API_URL } from '../config';
 import { getAuthUser } from '../auth';
 import toast from 'react-hot-toast';
+import './Notifications.css';
 
 export default function Notifications({ events }: { events: unknown[] }) {
   const [items, setItems] = useState<Notification[]>([]);
@@ -49,24 +50,26 @@ export default function Notifications({ events }: { events: unknown[] }) {
   if (!items.length) return null;
 
   return (
-    <div style={{ marginTop: '1rem', padding: '0.75rem', border: '1px solid #eee', borderRadius: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem' }}>
-        <h3 style={{ margin: 0 }}>Notifications</h3>
-        <small style={{ color: '#666' }}>Latest changes in real time</small>
+    <div className="notify">
+      <div className="notify-head">
+        <div>
+          <div className="notify-title">Notifications</div>
+          <div className="notify-sub">Latest changes in real time</div>
+        </div>
       </div>
 
-      <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1rem' }}>
+      <ul className="notify-list">
         {items
           .slice()
           .reverse()
           .slice(0, 10)
           .map((n) => (
-            <li key={n.id} style={{ margin: '0.25rem 0' }}>
-              <span style={{ color: '#444' }}>
+            <li key={n.id} className="notify-item">
+              <span className="notify-msg">
                 {n.name && n.subject ? `${n.name} (${n.subject}) — ` : ''}
                 {n.message}
-              </span>{' '}
-              <small style={{ color: '#888' }}>({new Date(n.ts).toLocaleString()})</small>
+              </span>
+              <span className="notify-ts">{new Date(n.ts).toLocaleString()}</span>
             </li>
           ))}
       </ul>

@@ -65,16 +65,16 @@ docker-compose down -v
 
 ### Screenshoty
 Login
-![](login.jpeg)
+![](readme-assets/login.png)
 
 Register
-![](register.jpeg)
+![](readme-assets/register.png)
 
 Student
-![](student.jpeg)
+![](readme-assets/student.png)
 
 Teacher
-![](teacher.jpeg)
+![](readme-assets/teacher.png)
 
 ## Architektura
 
@@ -91,7 +91,7 @@ Porty (default):
 - Redis: `localhost:6379`
 - RedisInsight UI: http://localhost:8001
 
-![](diagram.png)
+![](readme-assets/diagram.png)
 
 ---
 

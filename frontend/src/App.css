@@ -1,148 +1,447 @@
+/* Modern dashboard theme for Task Tracer */
+
 #root {
-  position: absolute;
-  top: 0;
-  left: calc(50vw - max(25vw, 210px));
-  min-width: 350px;
-  width: 50vw;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-li {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-content: center;
-  padding: 10px;
-  border: lightgray 1px solid;
-  margin: 10px;
-  border-radius: 10px;
-}
-
-li>* {
-  margin: 5px;
-}
-
-li>p {
-  overflow: auto;
-  text-align: center;
-}
-
-ul {
+  position: static;
+  min-width: 320px;
+  width: 100%;
+  margin: 0;
   padding: 0;
 }
 
-#create_task {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  padding: 10px;
-  border: lightgray 1px solid;
-  margin: 10px;
-  border-radius: 10px;
-  background-color: #242424;
-  display: flex;
-  flex-direction: column;
-}
-
-#create_task>input {
-  margin-bottom: 15px;
-}
-
-.checked {
-  color: gray;
-  text-decoration: line-through;
-}
-
-/* App.css */
-.app-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 1rem;
-}
-
-.app-header h1 {
-  color: #333;
-  font-size: 2rem;
+/* Neutralize legacy list styling that leaked globally */
+ul {
+  padding: 0;
   margin: 0;
 }
 
-.logout-button {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: none;
-  background: #dc3545;
-  color: white;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.3s ease;
+li {
+  list-style: none;
 }
 
-.logout-button:hover {
-  background: #c82333;
+/* --- Shell --- */
+.shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 800px at 10% 5%, rgba(110, 231, 183, 0.25), transparent 60%),
+    radial-gradient(900px 700px at 90% 15%, rgba(99, 102, 241, 0.25), transparent 55%),
+    radial-gradient(1000px 800px at 60% 90%, rgba(244, 114, 182, 0.18), transparent 60%),
+    linear-gradient(180deg, #0b1020 0%, #070a12 100%);
+  color: #e7eaf3;
 }
 
-.content-container {
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 14, 27, 0.6);
+  backdrop-filter: blur(14px);
 }
 
-/* Global select styles: modern appearance with custom arrow and focus ring */
-select {
-  /* Fix weird gap under selects (baseline / line-box spacing) */
-  display: block;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(110, 231, 183, 1));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.brand-subtitle {
+  font-size: 0.75rem;
+  color: rgba(231, 234, 243, 0.68);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(231, 234, 243, 0.9);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  max-width: min(52vw, 520px);
+}
+
+.user-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #6ee7b7;
+  box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.18);
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(231, 234, 243, 0.92);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Dashboard layout --- */
+.dashboard {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 1rem;
+  align-items: stretch;
+  margin: 0.75rem 0 1rem;
+}
+
+.hero-left {
+  padding: 1.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.5vw, 2.1rem);
+  letter-spacing: -0.02em;
+}
+
+.hero-desc {
+  margin: 0.35rem 0 0.9rem;
+  color: rgba(231, 234, 243, 0.7);
+  max-width: 58ch;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  border-radius: 16px;
+  padding: 0.9rem;
+  background: rgba(10, 14, 27, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-k {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.stat-l {
+  margin-top: 0.15rem;
+  color: rgba(231, 234, 243, 0.65);
+  font-size: 0.8rem;
+}
+
+.hero-right {
+  display: flex;
+}
+
+.filters-card {
+  flex: 1;
+  padding: 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.filters-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.filters-title {
+  font-weight: 900;
+}
+
+.filters-sub {
+  font-size: 0.8rem;
+  color: rgba(231, 234, 243, 0.65);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(231, 234, 243, 0.7);
+  margin-bottom: 0.35rem;
+}
+
+/* Panels */
+.grid {
+  display: grid;
+  grid-template-columns: 1.6fr 0.9fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.panel-meta {
+  font-size: 0.8rem;
+  color: rgba(231, 234, 243, 0.65);
+}
+
+/* Inputs/selects inside dark theme */
+input,
+select {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(10, 14, 27, 0.62);
+  color: rgba(231, 234, 243, 0.92);
+  padding: 0.75rem 0.85rem;
+  outline: none;
+}
+
+input::placeholder {
+  color: rgba(231, 234, 243, 0.45);
+}
+
+input:focus,
+select:focus {
+  border-color: rgba(110, 231, 183, 0.7);
+  box-shadow: 0 0 0 4px rgba(110, 231, 183, 0.12);
+}
+
+/* Custom arrow for select (override previous global select styles) */
+select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  width: 100%;
-  padding: 0.6rem 2.2rem 0.6rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #213547;
-  font: inherit;
-  line-height: 1.3;
-  background-image: linear-gradient(45deg, transparent 50%, #333 50%),
-    linear-gradient(135deg, #333 50%, transparent 50%),
-    linear-gradient(to right, #ccc, #ccc);
-  background-position: calc(100% - 1rem) calc(50% - 3px), calc(100% - 0.6rem) calc(50% - 3px), calc(100% - 1.6rem) 50%;
-  background-size: 6px 6px, 6px 6px, 1px 1.2em;
+  padding-right: 2.4rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(231, 234, 243, 0.85) 50%),
+    linear-gradient(135deg, rgba(231, 234, 243, 0.85) 50%, transparent 50%);
+  background-position: calc(100% - 1.1rem) calc(50% - 3px), calc(100% - 0.8rem) calc(50% - 3px);
+  background-size: 7px 7px, 7px 7px;
   background-repeat: no-repeat;
 }
 
-select:focus {
-  outline: none;
-  border-color: #646cff;
-  box-shadow: 0 0 0 4px rgba(100, 108, 255, 0.12);
+/* ------------------------------
+   Better native <select> dropdown styling
+   (note: OS-native popups can't be fully styled everywhere)
+------------------------------ */
+
+/* Try to make the opened list match dark theme where supported */
+select {
+  color-scheme: dark;
 }
 
-select::-ms-expand {
-  display: none;
-  /* hide default arrow in IE/Edge */
+/* Firefox-only: style the dropdown list */
+@-moz-document url-prefix() {
+  select {
+    scrollbar-color: rgba(110, 231, 183, 0.5) rgba(10, 14, 27, 0.8);
+  }
+
+  select option {
+    background-color: #0b1020;
+    color: rgba(231, 234, 243, 0.92);
+  }
 }
 
-option {
-  padding: 0.4rem 0.6rem;
+/* WebKit/Chromium: limit what we can do, but at least set colors */
+select option {
+  background-color: #0b1020;
+  color: rgba(231, 234, 243, 0.92);
 }
 
-/* ensure selects inside form groups match inputs */
-.form-group select,
-.login-form select,
-.register-form select {
-  width: 100%;
-  box-sizing: border-box;
+/* ------------------------------
+   Fix gradient button edge artifacts
+   by painting gradient in a ::before layer clipped by border-radius.
+------------------------------ */
+
+.login-button,
+.register-button,
+.create-task-button {
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: rgba(11, 16, 32, 0.74);
+  /* text color */
+  isolation: isolate;
+}
+
+.login-button::before,
+.register-button::before,
+.create-task-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* NOTE: we intentionally do NOT rely on "> *" because the button text is a text node.
+   The default stacking context keeps text above ::before anyway. */
+
+.login-button::before {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(110, 231, 183, 1));
+}
+
+.register-button::before {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 1), rgba(110, 231, 183, 1));
+}
+
+.create-task-button::before {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 1), rgba(110, 231, 183, 1));
+}
+
+.login-button,
+.register-button,
+.create-task-button {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.login-button:hover::before,
+.register-button:hover::before,
+.create-task-button:hover::before {
+  filter: brightness(1.05);
+}
+
+/* Keep panels in the sidebar spaced */
+.side {
+  display: grid;
+  gap: 1rem;
+}
+
+/* Ensure overflowing gradients don't "bleed" past rounded corners */
+button,
+.btn,
+.login-button,
+.register-button,
+.create-task-button {
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+/* Select/option styling consistency */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background: #0b1020;
+  color: rgba(231, 234, 243, 0.92);
+}
+
+/* Slightly stronger select border so it looks styled on dark background */
+select {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+select:hover {
+  border-color: rgba(110, 231, 183, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    padding: 0.85rem 0.85rem;
+  }
+
+  .dashboard {
+    padding: 0.85rem;
+  }
+
+  .user-pill {
+    display: none;
+  }
 }
