@@ -63,35 +63,25 @@ docker-compose down -v
 ## Dokumentace
 
 ### Screenshoty
-Doplňte screenshoty do repozitáře a odkažte je zde:
+Login
+![](login.jpeg)
 
-TODO : pridat screenshoty
+Register
+![](register.jpeg)
 
-- `docs/screenshots/01-dashboard.png` – přehled úkolů
-- `docs/screenshots/02-create-task.png` – vytvoření úkolu
-- `docs/screenshots/03-realtime.png` – real-time aktualizace (2 okna)
+Student
+![](student.jpeg)
 
-> Upravte názvy/cesty podle skutečného umístění souborů.
+Teacher
+![](teacher.jpeg)
 
-### Diagram architektury (draw.io)
-Vytvořte architektonický diagram v draw.io a uložte jej do repozitáře, např.:
 
-- `docs/architecture.drawio` (zdroj)
-- `docs/architecture.png` (export pro README)
 
-TODO : diagram
+### Diagram architektury
 
-Doporučený obsah diagramu:
-- Frontend (React/Vite)
-- Backend služba (pokud existuje)
-- Redis + RedisInsight
-- Komunikace (HTTP/WebSocket/SSE – dle implementace)
-- Docker Compose jako runtime
+![](diagram1.png)
+![](diagram2.png)
+![](diagram3.png)
+![](diagram4.png)
 
-A vložte náhled:
-
-```text
-docs/architecture.png
-```
-
-(Do README následně přidejte standardní markdown obrázek, až budou soubory existovat.)
+Oops, mě upadly AI generated diagramy a ten reálný se do nich zamíchal.
