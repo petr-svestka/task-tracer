@@ -6,6 +6,7 @@ import { redis } from './redis.js';
 import { signJwt, verifyJwt } from './jwt.js';
 import { attachSocketIo } from './socket.js';
 import { appendTaskEvent } from './streams.js';
+import { ensureTaskSearchIndex, searchTasks } from './search.js';
 
 // Keys / streams required by assignment
 const TASK_EVENTS_CHANNEL = 'task-events';
@@ -170,6 +171,49 @@ app.get('/health', async (_req, res) => {
         res.status(500).json({ ok: false });
     }
 });
+
+// --- Search (RediSearch) ---
+app.get(
+    '/tasks/search',
+    requireAuth(async (req, res, user) => {
+        const q = typeof req.query.q === 'string' ? req.query.q : '';
+        const subject = typeof req.query.subject === 'string' ? req.query.subject : '';
+        const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+        const offset = typeof req.query.offset === 'string' ? Number(req.query.offset) : undefined;
+
+        // Teachers may optionally search only their own tasks via userId filter.
+        // Students: keep it simple, allow searching only within their visible scope by filtering after.
+        const r = await searchTasks({ q, subject, limit, offset });
+
+        // Enforce visibility rules: user sees their own tasks + public tasks.
+        // Search index contains all tasks, so we must filter.
+        const publicIds = new Set(await redis.zrevrange(tasksPublicKey(), 0, 2000));
+
+        const visible = (r.items as Task[]).filter((t) => {
+            const isPublic = publicIds.has(String(t.id));
+            const isOwner = t.userId === user.id;
+            return isPublic || isOwner;
+        });
+
+        // Normalize completion flag the same way as GET /tasks
+        const tasks: Task[] = [];
+        for (const t of visible) {
+            const isPublic = publicIds.has(String(t.id));
+            if (isPublic) {
+                if (user.role === 'teacher') {
+                    tasks.push({ ...t, completed: false });
+                } else {
+                    const isCompleted = (await redis.sismember(taskCompletionKey(String(t.id)), String(user.id))) === 1;
+                    tasks.push({ ...t, completed: isCompleted });
+                }
+            } else {
+                tasks.push(t);
+            }
+        }
+
+        res.json({ total: r.total, items: tasks });
+    }),
+);
 
 // --- Auth ---
 app.post('/auth/register', async (req, res) => {
@@ -572,6 +616,9 @@ app.get(
 
 const server = createServer(app);
 attachSocketIo({ httpServer: server, jwtSecret: JWT_SECRET });
+
+// Ensure RediSearch index exists (Redis Stack)
+ensureTaskSearchIndex().catch((e) => console.error('[search] ensure index failed', e));
 
 server.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);

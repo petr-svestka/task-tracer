@@ -1,0 +1,1 @@
+# Redis persistence directory (bind-mounted by docker-compose)
