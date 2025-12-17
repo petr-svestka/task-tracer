@@ -22,6 +22,36 @@ function App() {
       try {
         const res = await orig(...args);
         if (res.status === 401) {
+          const urlFromArgs = () => {
+            const input = args[0];
+            if (typeof input === 'string') return input;
+            if (input instanceof Request) return input.url;
+            try {
+              return String(input);
+            } catch {
+              return '';
+            }
+          };
+
+          const rawUrl = urlFromArgs();
+          let pathname = '';
+          try {
+            pathname = new URL(rawUrl, window.location.origin).pathname;
+          } catch {
+            pathname = '';
+          }
+
+          const isAuthEndpoint =
+            pathname.endsWith('/auth/login') ||
+            pathname.endsWith('/auth/logout') ||
+            pathname.endsWith('/auth/register');
+
+          // If the user isn't logged in yet (e.g. wrong password on login),
+          // don't treat 401 as a "session expired" event.
+          const hadSession = Boolean(getAuthUser()?.token);
+
+          if (isAuthEndpoint || !hadSession) return res;
+
           try {
             localStorage.removeItem('authUser');
             localStorage.setItem('sessionInvalid', '1');
