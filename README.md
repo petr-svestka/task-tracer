@@ -26,7 +26,7 @@
 
 ```bash
 git clone https://github.com/petr-svestka/task-tracer.git
-cd task-tracker
+cd task-tracer
 docker-compose up --build -d
 ```
 
