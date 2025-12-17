@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Notification } from '../types';
 import { API_URL } from '../config';
-
-type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
-
-function getAuthUser(): AuthUser | null {
-  const raw = localStorage.getItem('authUser');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
+import { getAuthUser } from '../auth';
 
 export default function Notifications({ events }: { events: unknown[] }) {
   const [items, setItems] = useState<Notification[]>([]);

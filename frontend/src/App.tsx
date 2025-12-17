@@ -8,18 +8,7 @@ import RegisterPage from './components/RegisterPage';
 import Notifications from './components/Notifications';
 import type { Task } from './types';
 import { API_URL, SOCKET_URL } from './config';
-
-type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
-
-function getAuthUser(): AuthUser | null {
-  const raw = localStorage.getItem('authUser');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
+import { getAuthUser } from './auth';
 
 function App() {
   // Install global fetch wrapper once: on any 401 response clear session,
@@ -208,7 +197,7 @@ function App() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Category</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Subject</label>
             <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)}>
               {subjects.map((s) => (
                 <option key={s} value={s}>

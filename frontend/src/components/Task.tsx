@@ -1,19 +1,7 @@
 import './Task.css';
 import type { Task as TaskType } from '../types';
 import { API_URL } from '../config';
-
-
-type AuthUser = { id: number; username: string; token: string; role?: 'student' | 'teacher' };
-
-function getAuthUser(): AuthUser | null {
-    const raw = localStorage.getItem('authUser');
-    if (!raw) return null;
-    try {
-        return JSON.parse(raw) as AuthUser;
-    } catch {
-        return null;
-    }
-}
+import { getAuthUser } from '../auth';
 
 export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispatch<React.SetStateAction<TaskType[]>> }) {
     const handleToggleComplete = async () => {
