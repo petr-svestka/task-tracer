@@ -53,7 +53,10 @@ export default function Notifications({ events }: { events: unknown[] }) {
           .slice(0, 10)
           .map((n) => (
             <li key={n.id} style={{ margin: '0.25rem 0' }}>
-              <span style={{ color: '#444' }}>{n.message}</span>{' '}
+              <span style={{ color: '#444' }}>
+                {n.name && n.subject ? `${n.name} (${n.subject}) — ` : ''}
+                {n.message}
+              </span>{' '}
               <small style={{ color: '#888' }}>({new Date(n.ts).toLocaleString()})</small>
             </li>
           ))}

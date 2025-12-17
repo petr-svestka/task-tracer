@@ -19,6 +19,7 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
     const handleToggleComplete = async () => {
         const user = getAuthUser();
         if (!user?.token) return;
+        if (user.role === 'teacher') return;
 
         try {
                 const res = await fetch(`${API_URL}/tasks/${task.id}`, {
@@ -56,15 +57,18 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
     };
 
     const currentUser = getAuthUser();
+    const canComplete = currentUser?.role !== 'teacher';
 
     return (
         <li className={`task-item ${task.completed ? 'completed' : ''}`}>
-            <input
-                type="checkbox"
-                className="task-checkbox"
-                checked={task.completed}
-                onChange={handleToggleComplete}
-            />
+            {canComplete ? (
+                <input
+                    type="checkbox"
+                    className="task-checkbox"
+                    checked={task.completed}
+                    onChange={handleToggleComplete}
+                />
+            ) : null}
             <div className="task-details">
                 <span className="task-title">{task.title}</span>
                 <span className="task-subject">{task.subject}</span>

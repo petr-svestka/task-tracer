@@ -21,5 +21,7 @@ export type Notification = {
   type: string;
   taskId: string;
   message: string;
+  name: string;
+  subject: string;
   ts: number;
 };

@@ -9,7 +9,7 @@ type AuthUser = { id: number; username: string };
 
 type TaskEvent =
     | { type: 'task.created' | 'task.updated' | 'task.deleted'; userId: number; taskId: string }
-    | { type: 'notification.created'; userId: number; taskId: string; message: string };
+    | { type: 'notification.created'; userId: number; taskId: string; message: string; name?: string; subject?: string };
 
 function onceReady(client: Redis) {
     return new Promise<void>((resolve, reject) => {
@@ -78,7 +78,9 @@ export async function attachSocketIo(opts: {
     sub.on('message', (_channel, message) => {
         try {
             const evt = JSON.parse(message) as TaskEvent;
-            if (evt.userId === -1) {
+            if (evt.type === 'notification.created' && evt.userId === 0) {
+                io.emit('task:event', evt);
+            } else if (evt.userId === -1) {
                 io.emit('task:event', evt);
             } else {
                 io.to(`user:${evt.userId}`).emit('task:event', evt);

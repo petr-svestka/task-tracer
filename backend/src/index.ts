@@ -125,6 +125,8 @@ async function pushNotification(evt: {
     type: 'task.created' | 'task.updated' | 'task.deleted' | 'task.completed';
     taskId: string;
     message: string;
+    name: string;
+    subject: string;
 }) {
     // Redis Streams for notifications history (assignment expects Streams usage)
     await redis.xadd(
@@ -138,6 +140,10 @@ async function pushNotification(evt: {
         evt.taskId,
         'message',
         evt.message,
+        'name',
+        evt.name,
+        'subject',
+        evt.subject,
         'ts',
         String(Date.now()),
     );
@@ -145,7 +151,14 @@ async function pushNotification(evt: {
     // Also publish to Socket.IO bridge
     await redis.publish(
         TASK_EVENTS_CHANNEL,
-        JSON.stringify({ type: 'notification.created', userId: evt.userId, taskId: evt.taskId, message: evt.message }),
+        JSON.stringify({
+            type: 'notification.created',
+            userId: evt.userId,
+            taskId: evt.taskId,
+            message: evt.message,
+            name: evt.name,
+            subject: evt.subject,
+        }),
     );
 }
 
@@ -264,8 +277,12 @@ app.get(
             if (!raw) continue;
             const t = JSON.parse(raw) as Task;
             if (publicIds.includes(t.id)) {
-                const isCompleted = (await redis.sismember(taskCompletionKey(t.id), String(user.id))) === 1;
-                tasks.push({ ...t, completed: isCompleted });
+                if (user.role === 'teacher') {
+                    tasks.push({ ...t, completed: false });
+                } else {
+                    const isCompleted = (await redis.sismember(taskCompletionKey(t.id), String(user.id))) === 1;
+                    tasks.push({ ...t, completed: isCompleted });
+                }
             } else {
                 tasks.push(t);
             }
@@ -312,12 +329,14 @@ app.post(
             .exec();
 
         await appendTaskEvent({ type: 'task.created', userId: user.id, taskId: id });
-        // notification for creator only
+        // broadcast notification (userId=0 means "everyone")
         await pushNotification({
-            userId: user.id,
+            userId: 0,
             type: 'task.created',
             taskId: id,
-            message: `New public task created: ${task.title} (${task.subject})`,
+            message: `New public task created.`,
+            name: task.title,
+            subject: task.subject,
         });
 
         res.status(201).json(task);
@@ -334,12 +353,19 @@ app.put(
             return;
         }
         const current = JSON.parse(raw) as Task;
+        const isPublic = (await redis.zscore(tasksPublicKey(), id)) !== null;
         // If the requester is the owner, allow full update
         const body = req.body ?? {};
         if (current.userId === user.id) {
             const { title, subject, completed, finishDate } = body;
             if (typeof title !== 'string' || typeof subject !== 'string' || typeof completed !== 'boolean' || typeof finishDate !== 'number') {
                 res.status(400).json({ error: 'title, subject, completed, finishDate are required' } satisfies ApiError);
+                return;
+            }
+
+            // Teachers cannot complete tasks.
+            if (user.role === 'teacher' && completed === true) {
+                res.status(403).json({ error: 'forbidden' } satisfies ApiError);
                 return;
             }
 
@@ -362,10 +388,12 @@ app.put(
             await appendTaskEvent({ type: 'task.updated', userId: user.id, taskId: id });
 
             await pushNotification({
-                userId: user.id,
+                userId: isPublic ? 0 : user.id,
                 type: 'task.updated',
                 taskId: id,
-                message: `Task updated: ${updated.title}`,
+                message: `Task updated.`,
+                name: updated.title,
+                subject: updated.subject,
             });
 
             res.json(updated);
@@ -373,8 +401,11 @@ app.put(
         }
 
         // Non-owner: if the task is public, allow marking completion per-user
-        const isPublic = (await redis.zscore(tasksPublicKey(), id)) !== null;
         if (isPublic && typeof body.completed === 'boolean') {
+            if (user.role === 'teacher') {
+                res.status(403).json({ error: 'forbidden' } satisfies ApiError);
+                return;
+            }
             if (body.completed) {
                 await redis.sadd(taskCompletionKey(id), String(user.id));
                 await redis.expire(taskCompletionKey(id), TASK_TTL_SECONDS);
@@ -386,9 +417,23 @@ app.put(
             await appendTaskEvent({ type: 'task.updated', userId: user.id, taskId: id });
 
             if (body.completed) {
-                await pushNotification({ userId: user.id, type: 'task.completed', taskId: id, message: `Task completed: ${current.title}` });
+                await pushNotification({
+                    userId: user.id,
+                    type: 'task.completed',
+                    taskId: id,
+                    message: `Task completed.`,
+                    name: current.title,
+                    subject: current.subject,
+                });
             } else {
-                await pushNotification({ userId: user.id, type: 'task.updated', taskId: id, message: `Task marked incomplete: ${current.title}` });
+                await pushNotification({
+                    userId: user.id,
+                    type: 'task.updated',
+                    taskId: id,
+                    message: `Task marked incomplete.`,
+                    name: current.title,
+                    subject: current.subject,
+                });
             }
 
             // Return a representation for this user (completed flag reflecting their state)
@@ -430,7 +475,14 @@ app.delete(
                 .exec();
 
             await appendTaskEvent({ type: 'task.deleted', userId: user.id, taskId: id });
-            await pushNotification({ userId: user.id, type: 'task.deleted', taskId: id, message: `Task deleted: ${task.title}` });
+            await pushNotification({
+                userId: 0,
+                type: 'task.deleted',
+                taskId: id,
+                message: `Task deleted.`,
+                name: task.title,
+                subject: task.subject,
+            });
 
             res.json({ ok: true });
             return;
@@ -450,7 +502,14 @@ app.delete(
             .exec();
 
         await appendTaskEvent({ type: 'task.deleted', userId: user.id, taskId: id });
-        await pushNotification({ userId: user.id, type: 'task.deleted', taskId: id, message: `Task deleted: ${task.title}` });
+        await pushNotification({
+            userId: user.id,
+            type: 'task.deleted',
+            taskId: id,
+            message: `Task deleted.`,
+            name: task.title,
+            subject: task.subject,
+        });
 
         res.json({ ok: true });
     }),
@@ -481,6 +540,8 @@ app.get(
             type?: string;
             taskId?: string;
             message?: string;
+            name?: string;
+            subject?: string;
             ts?: string;
         };
 
@@ -491,12 +552,17 @@ app.get(
                 for (let i = 0; i < fields.length; i += 2) obj[fields[i]] = fields[i + 1];
                 return { id, ...obj };
             })
-            .filter((n) => Number(n.userId ?? -1) === user.id)
+            .filter((n) => {
+                const uid = Number(n.userId ?? -1);
+                return uid === 0 || uid === user.id;
+            })
             .map((n) => ({
                 id: n.id,
                 type: n.type ?? 'unknown',
                 taskId: n.taskId ?? '',
                 message: n.message ?? '',
+                name: n.name ?? '',
+                subject: n.subject ?? '',
                 ts: Number(n.ts ?? '0'),
             }));
 
