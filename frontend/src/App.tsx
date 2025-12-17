@@ -97,8 +97,8 @@ function App() {
     };
   }, []);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filterCompleted, setFilterCompleted] = useState<'all' | 'open' | 'done'>('all');
-  const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterCompleted, setFilterCompleted] = useState<'All' | 'open' | 'done'>('All');
+  const [filterSubject, setFilterSubject] = useState<string>('All');
   const [rtEvents, setRtEvents] = useState<unknown[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -108,14 +108,14 @@ function App() {
   const subjects = useMemo(() => {
     const s = new Set<string>();
     tasks.forEach((t) => s.add(t.subject));
-    return ['all', ...Array.from(s).sort()];
+    return ['All', ...Array.from(s).sort()];
   }, [tasks]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       const completedOk =
-        filterCompleted === 'all' ? true : filterCompleted === 'done' ? t.completed : !t.completed;
-      const subjectOk = filterSubject === 'all' ? true : t.subject === filterSubject;
+        filterCompleted === 'All' ? true : filterCompleted === 'done' ? t.completed : !t.completed;
+      const subjectOk = filterSubject === 'All' ? true : t.subject === filterSubject;
       return completedOk && subjectOk;
     });
   }, [tasks, filterCompleted, filterSubject]);
@@ -248,9 +248,9 @@ function App() {
             <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Status</label>
             <select
               value={filterCompleted}
-              onChange={(e) => setFilterCompleted(e.target.value as 'all' | 'open' | 'done')}
+              onChange={(e) => setFilterCompleted(e.target.value as 'All' | 'open' | 'done')}
             >
-              <option value="all">All</option>
+              <option value="All">All</option>
               <option value="open">Open</option>
               <option value="done">Done</option>
             </select>
