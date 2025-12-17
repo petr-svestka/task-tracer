@@ -20,6 +20,31 @@ function App() {
     const orig = window.fetch.bind(window);
     window.fetch = async (...args: Parameters<typeof fetch>) => {
       try {
+        const tokenFromArgs = () => {
+          const input = args[0];
+          const init = args[1] as RequestInit | undefined;
+
+          const readAuthHeader = (headers: HeadersInit | undefined): string | null => {
+            if (!headers) return null;
+            if (headers instanceof Headers) return headers.get('authorization') ?? headers.get('Authorization');
+            if (Array.isArray(headers)) {
+              const found = headers.find(([k]) => k.toLowerCase() === 'authorization');
+              return found?.[1] ?? null;
+            }
+            const obj = headers as Record<string, string>;
+            return obj.authorization ?? obj.Authorization ?? null;
+          };
+
+          let authHeader: string | null = null;
+          if (input instanceof Request) authHeader = input.headers.get('authorization') ?? input.headers.get('Authorization');
+          if (!authHeader) authHeader = readAuthHeader(init?.headers);
+          if (!authHeader) return null;
+
+          const m = authHeader.match(/^\s*Bearer\s+(.+)\s*$/i);
+          return m?.[1] ?? null;
+        };
+
+        const requestToken = tokenFromArgs();
         const res = await orig(...args);
         if (res.status === 401) {
           const urlFromArgs = () => {
@@ -48,9 +73,14 @@ function App() {
 
           // If the user isn't logged in yet (e.g. wrong password on login),
           // don't treat 401 as a "session expired" event.
-          const hadSession = Boolean(getAuthUser()?.token);
+          const currentToken = getAuthUser()?.token;
+          const hadSession = Boolean(currentToken);
 
-          if (isAuthEndpoint || !hadSession) return res;
+          // Avoid race: if an old/in-flight request returns 401 after a new login,
+          // don't wipe the freshly-created session.
+          const isCurrentRequest = requestToken && currentToken && requestToken === currentToken;
+
+          if (isAuthEndpoint || !hadSession || !isCurrentRequest) return res;
 
           try {
             localStorage.removeItem('authUser');
