@@ -22,25 +22,18 @@ docker-compose up --build -d
 ## Testování
 
 ### 1) Seed – 10 testovacích úkolů
-Spusťte seed skript, který vloží 10 úkolů do Redis.
+Spusťte seed skript, který vloží testovací uživatele a úkoly do Redis.
 
-TODO : vytvorit seed script
-
-> Pozn.: Upravte níže uvedený příkaz podle toho, jak je seed v projektu řešen (např. `docker-compose exec <service> ...`).
+- vytvoří uživatele:
+  - `teacher` / `1234` (role `teacher`)
+  - `student` / `1234` (role `student`)
+- vytvoří **10** veřejných (public) úkolů
 
 ```bash
-# PŘÍKLAD (upravte dle projektu):
-# docker-compose exec <backend-service> npm run seed
-# nebo:
-# docker-compose exec <backend-service> python -m app.seed
+docker-compose exec backend npm run seed
 ```
 
-Očekávání:
-
-TODO : co ten skript dela
-
-- Po spuštění se ve UI objeví 10 nových úkolů.
-
+> Pozn.: pokud seed spustíte vícekrát, přidá se dalších 10 úkolů.
 
 ## Ukončení
 
