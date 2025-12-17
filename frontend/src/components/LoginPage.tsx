@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { API_URL } from '../config';
+import toast from 'react-hot-toast';
 
 type LoginResponse = { token: string; user: { id: number; username: string; role?: 'student' | 'teacher' } };
 
@@ -14,14 +15,14 @@ const LoginPage: React.FC = () => {
         const flag = localStorage.getItem('sessionInvalid');
         if (flag) {
             localStorage.removeItem('sessionInvalid');
-            alert('Session invalid or expired. Please login.');
+            toast.error('Session expired. Please sign in.');
         }
     }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        try {
+        const loginPromise = (async () => {
             const res = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -36,9 +37,18 @@ const LoginPage: React.FC = () => {
             const data = (await res.json()) as LoginResponse;
             localStorage.setItem('authUser', JSON.stringify({ ...data.user, token: data.token }));
             navigate('/');
+        })();
+
+        toast.promise(loginPromise, {
+            loading: 'Signing in…',
+            success: 'Signed in',
+            error: 'Login details are incorect',
+        });
+
+        try {
+            await loginPromise;
         } catch (err) {
             console.error(err);
-            alert('Login failed. Is your account actually created?');
         }
     };
 

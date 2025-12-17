@@ -175,7 +175,7 @@ Server:
 
 - ověří JWT a připojí socket do roomu `user:<id>`
 - bridge z Redis Pub/Sub kanálu `task-events` posílá eventy do:
-  - všech (broadcast), pokud `userId` v eventu je `-1` nebo `0`
+  - všech (broadcast), pokud `userId` v eventu je `0`
   - konkrétního uživatele (room), pokud `userId` je ID uživatele
 
 Event name do klienta:

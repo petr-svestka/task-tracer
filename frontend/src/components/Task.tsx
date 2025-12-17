@@ -2,6 +2,7 @@ import './Task.css';
 import type { Task as TaskType } from '../types';
 import { API_URL } from '../config';
 import { getAuthUser } from '../auth';
+import toast from 'react-hot-toast';
 
 export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispatch<React.SetStateAction<TaskType[]>> }) {
     const handleToggleComplete = async () => {
@@ -10,20 +11,20 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
         if (user.role === 'teacher') return;
 
         try {
-                const res = await fetch(`${API_URL}/tasks/${task.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${user.token}`,
-                    },
-                    body: JSON.stringify({ completed: !task.completed }),
-                });
+            const res = await fetch(`${API_URL}/tasks/${task.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
+                },
+                body: JSON.stringify({ completed: !task.completed }),
+            });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const saved = (await res.json()) as TaskType;
             setTasks((prev) => prev.map((t) => (t.id === task.id ? saved : t)));
         } catch (error) {
             console.error('Error updating task:', error);
-            alert('Failed to update task');
+            toast.error('Update failed');
         }
     };
 
@@ -31,16 +32,25 @@ export function Task({ task, setTasks }: { task: TaskType; setTasks: React.Dispa
         const user = getAuthUser();
         if (!user?.token) return;
 
-        try {
+        const deletePromise = (async () => {
             const res = await fetch(`${API_URL}/tasks/${task.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${user.token}` },
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             setTasks((prev) => prev.filter((t) => t.id !== task.id));
+        })();
+
+        toast.promise(deletePromise, {
+            loading: 'Removing…',
+            success: 'Deleted',
+            error: 'Delete failed',
+        });
+
+        try {
+            await deletePromise;
         } catch (error) {
             console.error('Error deleting task:', error);
-            alert('Failed to delete task');
         }
     };
 

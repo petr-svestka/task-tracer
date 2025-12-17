@@ -334,7 +334,7 @@ app.post(
             userId: 0,
             type: 'task.created',
             taskId: id,
-            message: `New public task created.`,
+            message: `Task created.`,
             name: task.title,
             subject: task.subject,
         });
@@ -430,7 +430,7 @@ app.put(
                     userId: user.id,
                     type: 'task.updated',
                     taskId: id,
-                    message: `Task marked incomplete.`,
+                    message: `Marked incomplete.`,
                     name: current.title,
                     subject: current.subject,
                 });

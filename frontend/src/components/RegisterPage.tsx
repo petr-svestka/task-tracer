@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RegisterPage.css';
 import { API_URL } from '../config';
+import toast from 'react-hot-toast';
 
 const RegisterPage: React.FC = () => {
     const [username, setUsername] = React.useState('');
@@ -14,21 +15,21 @@ const RegisterPage: React.FC = () => {
         e.preventDefault();
 
         if (!username.trim()) {
-            alert('Username is required');
+            toast.error('Enter a username');
             return;
         }
 
         if (password.length < 4) {
-            alert('Password must be at least 4 characters');
+            toast.error('Password is too short (min 4)');
             return;
         }
 
         if (password !== confirmPassword) {
-            alert("Passwords don't match!");
+            toast.error('Passwords do not match');
             return;
         }
 
-        try {
+        const registerPromise = (async () => {
             const res = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -36,20 +37,26 @@ const RegisterPage: React.FC = () => {
             });
 
             if (res.status === 409) {
-                alert('Username already exists');
-                return;
+                throw new Error('Username is taken');
             }
 
             if (!res.ok) {
                 const msg = await res.text();
                 throw new Error(msg || `HTTP ${res.status}`);
             }
+        })();
 
-            alert('Registration successful! Please log in.');
+        toast.promise(registerPromise, {
+            loading: 'Creating…',
+            success: 'Account created. Sign in.',
+            error: (e) => (e instanceof Error ? e.message : 'Registration failed'),
+        });
+
+        try {
+            await registerPromise;
             navigate('/login');
         } catch (err) {
             console.error(err);
-            alert('Registration failed. Are the fields correct?');
         }
     };
 

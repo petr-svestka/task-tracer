@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Notification } from '../types';
 import { API_URL } from '../config';
 import { getAuthUser } from '../auth';
+import toast from 'react-hot-toast';
 
 export default function Notifications({ events }: { events: unknown[] }) {
   const [items, setItems] = useState<Notification[]>([]);
+  const bootedRef = useRef(false);
+  const shownIdsRef = useRef<Set<string>>(new Set());
 
   const fetchLatest = async () => {
     const user = getAuthUser();
@@ -12,9 +15,26 @@ export default function Notifications({ events }: { events: unknown[] }) {
     const res = await fetch(`${API_URL}/notifications?count=30`, {
       headers: { Authorization: `Bearer ${user.token}` },
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      toast.error('Notifications failed to load');
+      return;
+    }
     const data = (await res.json()) as Notification[];
     setItems(data);
+
+    // Toast only for newly-seen notifications (skip initial load)
+    if (bootedRef.current) {
+      const newOnes = data.filter((n) => !shownIdsRef.current.has(n.id));
+      for (const n of newOnes.slice(-5)) {
+        // Keep it short: message is primary, name/subject is optional context
+        const prefix = n.name && n.subject ? `${n.name} (${n.subject}) — ` : '';
+        toast(prefix + n.message);
+        shownIdsRef.current.add(n.id);
+      }
+    } else {
+      data.forEach((n) => shownIdsRef.current.add(n.id));
+      bootedRef.current = true;
+    }
   };
 
   useEffect(() => {

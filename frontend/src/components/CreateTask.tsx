@@ -3,27 +3,29 @@ import './CreateTask.css';
 import type { Task } from '../types';
 import { API_URL } from '../config';
 import { getAuthUser } from '../auth';
+import toast from 'react-hot-toast';
 
 function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateAction<Task[]>> }) {
-    const auth = getAuthUser();
-    if (auth?.role !== 'teacher') return null;
     const [description, setDescription] = useState<string>('');
     const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState<string>('');
 
+    const auth = getAuthUser();
+    if (auth?.role !== 'teacher') return null;
+
     const handleCreate = async () => {
         const user = getAuthUser();
         if (!user?.token) {
-            alert('You must be logged in');
+            toast.error('Please sign in');
             return;
         }
 
         if (!description.trim() || !subject.trim()) {
-            alert('Please fill out all fields.');
+            toast.error('Fill in all fields');
             return;
         }
 
-        try {
+        const createPromise = (async () => {
             const payload = {
                 title: description.trim(),
                 finishDate: new Date(date).getTime(),
@@ -55,9 +57,18 @@ function CreateTask({ setTasks }: { setTasks: React.Dispatch<React.SetStateActio
             setDescription('');
             setDate(new Date().toISOString().split('T')[0]);
             setSubject('');
+        })();
+
+        toast.promise(createPromise, {
+            loading: 'Creating…',
+            success: 'Created',
+            error: 'Could not create task',
+        });
+
+        try {
+            await createPromise;
         } catch (error) {
             console.error('Error creating task:', error);
-            alert('Task creation failed. Are you sure you have the Teacher role?');
         }
     };
 
